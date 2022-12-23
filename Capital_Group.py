@@ -5,13 +5,13 @@ import openpyxl as xl
 
 def capital_group():
     print("""**Capital Group**\n
-1. Daily Report
-2. Merge 2 Excel Files
-3. Import Data from Old to New File
+1. Report
+2. Merge (2 Same Dimension Files)
+3. Import (Old to New File)
 """)
     option = input()
     if option == '1':
-        daily_report()
+        report()
     elif option == '2':
         merge_2_excel_files()
     elif option == '3':
@@ -20,16 +20,12 @@ def capital_group():
         input("\n**Wrong Input !!\n  Closing Program !!")
 
 
-def daily_report():
-    file_name = excel_file_name_input(title='***CDM Daily Report***\n')
+def report():
+    file_name = excel_file_name_input(title='***CDM Report***\n')
     print(f'File - {file_name}\nOpening File...')
 
-    try:
-        workbook = xl.load_workbook(Path(file_name))
-        sheet = workbook.active
-    except FileNotFoundError:
-        input("\n**This File doesn't exist in the Directory.\nPlease Re-Run the Program with correct file name.\n")
-        exit()
+    workbook = xl.load_workbook(Path(file_name))
+    sheet = workbook.active
     print("**File Opened Successfully !!!")
 
     # Printing Maximum Rows and Columns in the Sheet for proper Verification
@@ -50,7 +46,7 @@ def daily_report():
 
     # Determining the column number of Helper ID, Matching Status, Date Reviewed & Initials
     for i in range(1, max_cols + 1):
-        if sheet.cell(1, i).value.lower() == 'helper':
+        if sheet.cell(1, i).value.lower() in ('helper', 'helper id', 'helper_id', 'helperid'):
             helper = i
         elif sheet.cell(1, i).value.lower() == 'disposition':
             m_nm = i - 1
@@ -99,7 +95,7 @@ def daily_report():
     for d in today_data:
         if d[1].lower() == 'matched':
             matched += 1
-        if d[1].lower() == 'not matched':
+        if d[1].lower() in ('not matched', 'not_matched'):
             not_matched += 1
         if d[3] + d[2] not in initial_counter:
             initial_counter[d[3] + d[2]] = 1
@@ -116,12 +112,12 @@ def daily_report():
         print("\n**There are records with different 'Match Type' or 'Source Type'.")
 
     # Printing the Main Data for which Program has been Created
-    print(f"""
-    Reviewed Today : {len(today_reviewed_hid)} (based on Unique Helper Id's
+    print(f"""Statistics:
+    Reviewed       : {len(today_reviewed_hid)} (based on Unique Helper Id's
     Matched        : {matched}
     Not Matched    : {not_matched}
-    Pending Now    : {len(pending_now)}
-    Reviewed Now   : {len(reviewed_now)}
+    Pending        : {len(pending_now)}
+    Total Reviewed : {len(reviewed_now)}
     """)
 
     # Checking if Matched & Not Matched data has any common Helper ID
@@ -195,14 +191,10 @@ def merge_2_excel_files():
         '2nd', title='***Merge 2 Excel Files into 1st File***\n')
     print(f'Filling  In  - {file1}\nFilling From - {file2}\nOpening Files...')
 
-    try:
-        workbook1 = xl.load_workbook(Path(file1))
-        workbook2 = xl.load_workbook(Path(file2))
-        sheet1 = workbook1.active
-        sheet2 = workbook2.active
-    except FileNotFoundError:
-        input("\n**One of the files doesn't exist in the Directory.\n  Please Re-Run the Program with correct file name.\n\n  Closing Program!!")
-        exit()
+    workbook1 = xl.load_workbook(Path(file1))
+    workbook2 = xl.load_workbook(Path(file2))
+    sheet1 = workbook1.active
+    sheet2 = workbook2.active
 
     max_rows1, max_cols1 = sheet1.max_row, sheet1.max_column
     max_rows2, max_cols2 = sheet2.max_row, sheet2.max_column
@@ -246,14 +238,10 @@ def import_old_to_new():
         'New', title='***Import Data from Old into New File***\n')
     print(f'1. Old - {old}\n2. New - {new}\nOpening Files...')
 
-    try:
-        workbook1 = xl.load_workbook(Path(old))
-        workbook2 = xl.load_workbook(Path(new))
-        sheet1 = workbook1.active
-        sheet2 = workbook2.active
-    except FileNotFoundError:
-        input("\n**One of the files doesn't exist in the Directory.\n  Please Re-Run the Program with correct file name.\n\n  Closing Program!!")
-        exit()
+    workbook1 = xl.load_workbook(Path(old))
+    workbook2 = xl.load_workbook(Path(new))
+    sheet1 = workbook1.active
+    sheet2 = workbook2.active
 
     max_rows1, max_cols1 = sheet1.max_row, sheet1.max_column
     max_rows2, max_cols2 = sheet2.max_row, sheet2.max_column
@@ -262,13 +250,13 @@ def import_old_to_new():
 
     # Determining the column numbers
     for i in range(1, max_cols1 + 1):
-        if sheet1.cell(1, i).value.lower() == 'source plan sponsor name':
+        if sheet1.cell(1, i).value.lower() in ('source plan sponsor name', 'source_plan_sponsor_name'):
             sheet1_sponsor_name = i
-        elif sheet1.cell(1, i).value.lower() == 'plan name':
+        elif sheet1.cell(1, i).value.lower() in ('plan name', 'plan_name'):
             sheet1_plan_name = i
-        elif sheet1.cell(1, i).value.lower() == 'parsed_org_name_reg_line':
+        elif sheet1.cell(1, i).value.lower() in ('parsed org name reg line', 'parsed_org_name_reg_line'):
             sheet1_parsed_org_name = i
-        elif sheet1.cell(1, i).value.lower() == 'matching_cdm_party_id':
+        elif sheet1.cell(1, i).value.lower() in ('matching cdm party id', 'matching_cdm_party_id', 'matching cdm partyid', 'matching_cdm_partyid'):
             sheet1_cdm = i
         elif sheet1.cell(1, i).value.lower() == 'disposition':
             sheet1_m_nm = i - 1
@@ -281,13 +269,13 @@ def import_old_to_new():
             break
 
     for i in range(1, max_cols2 + 1):
-        if sheet2.cell(1, i).value.lower() == 'source plan sponsor name':
+        if sheet2.cell(1, i).value.lower() in ('source plan sponsor name', 'source_plan_sponsor_name'):
             sheet2_sponsor_name = i
-        elif sheet2.cell(1, i).value.lower() == 'plan name':
+        elif sheet2.cell(1, i).value.lower() in ('plan name', 'plan_name'):
             sheet2_plan_name = i
-        elif sheet2.cell(1, i).value.lower() == 'parsed_org_name_reg_line':
+        elif sheet2.cell(1, i).value.lower() in ('parsed org name reg line', 'parsed_org_name_reg_line'):
             sheet2_parsed_org_name = i
-        elif sheet2.cell(1, i).value.lower() == 'matching_cdm_party_id':
+        elif sheet2.cell(1, i).value.lower() in ('matching cdm party id', 'matching_cdm_party_id', 'matching cdm partyid', 'matching_cdm_partyid'):
             sheet2_cdm = i
         elif sheet2.cell(1, i).value.lower() == 'disposition':
             sheet2_m_nm = i - 1
@@ -305,7 +293,7 @@ def import_old_to_new():
     print("\n**Unique Data considered on the basis of following columns:")
     print("  Sponsor Name, Plan Name, Parsed Org Name & CDM Party ID")
 
-    print("\nImporting Data into Memory...")
+    print("\nLoading Data into Memory...")
     for i in range(2, max_rows1 + 1):
         if sheet1.cell(i, sheet1_initial) != None:
             temp = str(sheet1.cell(i, sheet1_sponsor_name).value) + str(sheet1.cell(i, sheet1_plan_name).value) + \
@@ -323,7 +311,7 @@ def import_old_to_new():
                 temp.append(sheet1.cell(i, sheet1_comment).value)
                 old_data.append(temp)
 
-    print(f"\nImporting Data into New File from Memory...")
+    print(f"\nLoading Data into New File from Memory...")
     for i in range(2, max_rows2 + 1):
         temp = str(sheet2.cell(i, sheet2_sponsor_name).value) + str(sheet2.cell(i, sheet2_plan_name).value) + \
             str(sheet2.cell(i, sheet2_parsed_org_name).value) + \
@@ -415,6 +403,12 @@ def excel_file_name_input(string='', title=''):
             counter += 1
             xl_files.append(file)
             print(f"{counter}. {file}")
+
+    if counter == 0:
+        print("\n\n**No Files !!!\n  Closing Program !!")
+        exit()
+    elif counter == 1:
+        return xl_files[0]
     option = int(
         input(f"\nEnter the file number corresponding to {string}file name: ")) - 1
     if len(xl_files) > option >= 0:
