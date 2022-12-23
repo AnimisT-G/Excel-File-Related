@@ -147,7 +147,7 @@ class BROWSER():
             By.CSS_SELECTOR, "div.result-cell")
         search_results = search_results[16:-1]
         if len(search_results) > 2:
-            search_results = 0
+            search_results = 30
         return int(search_results), results_plan
 
     def quit(self):  # Close the Automated Webpage
@@ -193,12 +193,16 @@ def main():  # Main Function
         previous_c_plan = c_plan
         driver.plan_name_search(c_plan)
         search_results, results_plan = driver.results()
-        if search_results > 29 or search_results == 0:
+        if search_results == 0:
+            sheet[f"D{row}"].value = 'Not Found'
             continue
+        elif search_results > 29:
+            continue
+
         Results = []
         for i in range(5):
             Results.append([results_plan.pop(0).text])
-        sheet[f"D{row}"].value = 'EIN'
+        sheet[f"D{row}"].value = 'Found'
         print(Results)
         for i in results_plan:
             print(i.text)
