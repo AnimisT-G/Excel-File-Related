@@ -2,11 +2,12 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, ElementClickInterceptedException, StaleElementReferenceException
 from os import listdir
 from pathlib import Path
 from time import sleep
 import openpyxl as xl
+import csv
 
 column_filter_flag = True
 
@@ -58,10 +59,11 @@ class BROWSER():
             By.CSS_SELECTOR, "md-sidenav.md-sidenav-right")
         flag = False
         while not flag:
-            flag = column_filter_navigation.is_displayed()
+            flag = self.browser.find_element(
+                By.XPATH, '//*[@id="body-content"]/ui-view/beacon-search/bale-search/bale-column-menu/md-sidenav/div/div[2]/v-accordion/v-pane[2]/v-pane-header/div/column-category/div/div[1]').is_displayed()
             if flag:
                 self.browser.find_element(
-                    By.XPATH, '//*[@id="body-content"]/ui-view/beacon-search/bale-search/bale-column-menu/md-sidenav/div/div[2]/v-accordion/v-pane[2]').click()
+                    By.XPATH, '//*[@id="body-content"]/ui-view/beacon-search/bale-search/bale-column-menu/md-sidenav/div/div[2]/v-accordion/v-pane[2]/v-pane-header/div/column-category/div/div[1]').click()
                 flag = False
                 while not flag:
                     flag = self.browser.find_element(
@@ -70,33 +72,38 @@ class BROWSER():
             By.XPATH, '//*[@id="body-content"]/ui-view/beacon-search/bale-search/bale-column-menu/md-sidenav/div/div[2]/v-accordion/v-pane[2]/v-pane-content/div/div[11]/div/md-checkbox/div[2]').click()
         self.browser.find_element(
             By.XPATH, '//*[@id="body-content"]/ui-view/beacon-search/bale-search/bale-column-menu/md-sidenav/div/div[2]/v-accordion/v-pane[2]/v-pane-content/div/div[13]/div/md-checkbox/div[2]').click()
-        send_us_email = self.browser.find_element(
-            By.ID, "hbl-live-chat-wrapper")
-        self.browser.execute_script("""
-            var element = arguments[0];
-            element.parentNode.removeChild(element);
-            """, send_us_email)
-        self.browser.find_element(
-            By.XPATH, '//*[@id="body-content"]/ui-view/beacon-search/bale-search/bale-column-menu/md-sidenav/div/div[3]/button/div[1]').click()
-        while column_filter_navigation.is_displayed():
+        try:
+            send_us_email = self.browser.find_element(
+                By.CSS_SELECTOR, "div.olark-text-button")
+            if self.browser.find_element(By.CSS_SELECTOR, "div.olark-text-button").is_displayed():
+                self.browser.execute_script("""
+                    var element = arguments[0];
+                    element.parentNode.removeChild(element);
+                    """, send_us_email)
+        except:
             pass
 
+        self.browser.find_element(
+            By.XPATH, '//*[@id="body-content"]/ui-view/beacon-search/bale-search/bale-column-menu/md-sidenav/div/div[3]/button/div[1]').click()
+        flag = True
+        while flag:
+            flag = self.browser.find_element(
+                By.CSS_SELECTOR, "md-sidenav.md-sidenav-right").is_displayed()
+
     def plan_name_search(self, pname):  # Type Plan Name in Field and Run Search
-        search_filter_navigation = self.browser.find_element(
-            By.ID, "filter-nav")
-        flag = search_filter_navigation.is_displayed()
+        flag = self.browser.find_element(By.ID, "filter-nav").is_displayed()
         if not flag:
             try:
                 self.browser.find_element(
                     By.CSS_SELECTOR, "div.company-information").click()
-            except (NoSuchElementException, ElementNotInteractableException):
+            except (NoSuchElementException, ElementNotInteractableException, ElementClickInterceptedException):
                 self.browser.find_element(
                     By.CSS_SELECTOR, "button.main-search-button").click()
         while True:
             try:
                 self.browser.find_element(By.ID, "fl-input-125").click()
                 break
-            except (NoSuchElementException, ElementNotInteractableException):
+            except (NoSuchElementException, ElementNotInteractableException, ElementClickInterceptedException):
                 pass
         plan_name_input_field = self.browser.find_element(
             By.ID, "fl-input-125")
@@ -105,14 +112,16 @@ class BROWSER():
             'A').key_up(Keys.CONTROL).perform()
         plan_name_input_field.send_keys(pname)
         flag = False
-        plan_name_field_list = self.browser.find_element(By.ID, "ul-125")
+        plan_name_field_list = self.browser.find_element(
+            By.XPATH, '//*[@id="ul-125"]')
         sleep(1)
         while True:
             try:
                 sleep(1)
                 flag = plan_name_field_list.is_displayed()
                 if flag:
-                    plan_name_field_list.click()
+                    self.browser.find_element(
+                        By.XPATH, '//*[@id="ul-125"]/li[1]/md-autocomplete-parent-scope').click()
                     break
                 else:
                     plan_name_input_field.click()
@@ -120,12 +129,12 @@ class BROWSER():
                 pass
         self.browser.find_element(
             By.CSS_SELECTOR, "button.submit-button").click()
+
+    def results(self):  # Search Results
         flag = True
         while flag:
             flag = self.browser.find_element(
-                By.CSS_SELECTOR, "md-sidenav.md-sidenav-right").is_displayed()
-
-    def results(self):  # Search Results
+                By.ID, "filter-nav").is_displayed()
         flag = False
         while not flag:
             try:
@@ -140,7 +149,7 @@ class BROWSER():
                     self.browser.find_element(
                         By.CSS_SELECTOR, "button.main-search-button").click()
                     return 0, self.browser.find_elements(By.CSS_SELECTOR, "div.search-apology")
-                except NoSuchElementException:
+                except (NoSuchElementException, ElementClickInterceptedException):
                     pass
         search_results = self.browser.find_element(
             By.CSS_SELECTOR, "span.small-header").text
@@ -168,36 +177,46 @@ def main():  # Main Function
     print(f'File - {file_name}\nOpening File...')
     data_excel = xl.load_workbook(Path(file_name))
     data_sheet = data_excel.active
+    print("File Opened Successfully!!")
     new_excel = xl.Workbook()
     sheet = new_excel.active
-    for row in range(1, data_sheet.max_row):
-        sheet[f"A{row}"].value = data_sheet[f"B{row}"].value
-        sheet[f"B{row}"].value = data_sheet[f"Y{row}"].value
-        sheet[f"C{row}"].value = data_sheet[f"AP{row}"].value
-
-    data_excel.close()
+    sheet[f"A1"].value = data_sheet[f"B1"].value
+    sheet[f"B1"].value = data_sheet[f"Y1"].value
+    sheet[f"C1"].value = "Cleaned Org Name"
 
     # Creating the Web Automation Object
     driver = BROWSER()
     driver.sign_in(email, password)
     driver.search_filters()
-    previous_plan, previous_c_plan = 'a'*2
-    for row in range(2, sheet.max_row):
-        plan = sheet[f"B{row}"].value
-        if sheet[f"C{row}"].value != None:
+
+    previous_plan = previous_cleaned_plan = 'a'
+
+    for row in range(2, data_sheet.max_row):
+        date = data_sheet[f"AP{row}"].value  # date
+        if date != None:
             continue
-        c_plan = check_plan(plan, removals)
-        if plan in [previous_plan, 'NULL', None] or c_plan == previous_c_plan:
+
+        sheet[f"A{row}"].value = data_sheet[f"B{row}"].value  # helper_id
+        sheet[f"B{row}"].value = data_sheet[f"Y{row}"].value  # parsed_org_name
+        plan = str(sheet[f"B{row}"].value)
+        cleaned_plan = check_plan(plan, removals)
+        if (plan == previous_plan) or (cleaned_plan == previous_cleaned_plan):
             sheet[f"D{row}"].value = sheet[f"D{row - 1}"].value
             continue
+        elif len(sheet[f"B{row}"].value) < 2:
+            sheet[f"D{row}"].value = 'Not Searched'
+            continue
+
         previous_plan = plan
-        previous_c_plan = c_plan
-        driver.plan_name_search(c_plan)
+        sheet[f"C{row}"].value = previous_cleaned_plan = cleaned_plan
+        driver.plan_name_search(cleaned_plan)
+        new_excel.save(f"./Automated Results.xlsx")
         search_results, results_plan = driver.results()
         if search_results == 0:
             sheet[f"D{row}"].value = 'Not Found'
             continue
         elif search_results > 29:
+            sheet[f"D{row}"].value = 'Multiple Webpages'
             continue
 
         Results = []
@@ -216,12 +235,31 @@ def main():  # Main Function
 def email_n_password():  # Asking User Email & Password if Unable to Login
     email = input("Enter Login Email    : ")
     password = input("Enter Login Password : ")
-    removals = "inc:llc:pc:p.c:pllc:cpas:,inc:,llc:plan:and:trust:prof"
+    removals = "inc:inc.:,inc:llc:llc.:,llc:llp:llp.:,llp:co:co.:pa:p.a:pc:p.c:pllc:cpas:plan:and:&:trust:prof:ira:ltd:,ltd:ltd.:the:401:401k:401(k):k:(k):assetmark"
     option = input("\nSAVE Login Credentials in 'login.txt' file (Y) : ")
     if option in ('Y', 'y'):
         with open("login.txt", 'w') as file:
             file.write(email+'\n'+password+'\n'+removals)
     return email, password, removals.split(':')
+
+
+def check_plan(plan='', removals=[]):
+    temp = plan.lower().split(' ')
+    plan = ''
+    for word in temp:
+        if (word in removals) or (len(word) < 3):
+            continue
+        else:
+            c = word.find("'s")
+            if c > 0:
+                word = word[:c]
+            r = [',', '.']
+            word = list(word)
+            for j in r:
+                if j in word:
+                    word.remove(j)
+            plan += ''.join(word) + ' '
+    return plan.strip()
 
 
 def excel_file_name_input():
@@ -248,29 +286,5 @@ def excel_file_name_input():
         exit()
 
 
-def check_plan(plan='', removals=[]):
-    temp = plan.lower().split(' ')
-    removing_indexes = []
-    for i in temp:
-        if i in removals:
-            removing_indexes.append(temp.index(i))
-    removing_indexes.reverse()
-    for i in removing_indexes:
-        temp.pop(i)
-
-    plan = ''
-    for i in temp:
-        c = i.find(',')
-        if c > 0:
-            i = i[:c] + i[c+1:]
-        c = i.find("'s")
-        if c > 0:
-            i = i[:-2]
-        c = i.find(".")
-        if c > 0:
-            i = i[:c] + ' ' + i[c+1:]
-        plan += i + ' '
-    return plan
-
-
 main()
+input("Close Program")
