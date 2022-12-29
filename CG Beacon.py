@@ -7,9 +7,9 @@ from os import listdir
 from pathlib import Path
 from time import sleep
 import openpyxl as xl
-import csv
 
 column_filter_flag = True
+default_removals = "inc:inc.:,inc:llc:llc.:,llc:llp:llp.:,llp:co:co.:pa:p.a:pc:p.c:pllc:cpas:plan:and:&:trust:prof:ira:ltd:,ltd:ltd.:the:401:401k:401(k):k:(k):assetmark"
 
 
 class BROWSER():
@@ -33,7 +33,8 @@ class BROWSER():
             except (NoSuchElementException, ElementNotInteractableException):
                 try:
                     self.browser.find_element(By.CSS_SELECTOR, "ul.errors")
-                    email, password, removals = email_n_password()
+
+                    email, password = email_n_password()
                     self.sign_in(email, password)
                     return None
                 except NoSuchElementException:
@@ -166,15 +167,18 @@ class BROWSER():
 
 def main():  # Main Function
     # Email ID and Password for LogIn into Beacon
+    global removals
     try:
         with open("login.txt", 'r') as file:
             lines = file.readlines()
             email, password, removals = lines[0], lines[1], lines[2].split(':')
     except FileNotFoundError:
-        email, password, removals = email_n_password()
+        email, password = email_n_password()
+        removals = default_removals.split(':')
 
     file_name = excel_file_name_input()
     print(f'File - {file_name}\nOpening File...')
+
     data_excel = xl.load_workbook(Path(file_name))
     data_sheet = data_excel.active
     print("File Opened Successfully!!")
@@ -199,11 +203,11 @@ def main():  # Main Function
         sheet[f"A{row}"].value = data_sheet[f"B{row}"].value  # helper_id
         sheet[f"B{row}"].value = data_sheet[f"Y{row}"].value  # parsed_org_name
         plan = str(sheet[f"B{row}"].value)
-        cleaned_plan = check_plan(plan, removals)
+        cleaned_plan = check_plan(plan)
         if (plan == previous_plan) or (cleaned_plan == previous_cleaned_plan):
             sheet[f"D{row}"].value = sheet[f"D{row - 1}"].value
             continue
-        elif len(sheet[f"B{row}"].value) < 2:
+        elif len(cleaned_plan) < 5:
             sheet[f"D{row}"].value = 'Not Searched'
             continue
 
@@ -219,31 +223,53 @@ def main():  # Main Function
             sheet[f"D{row}"].value = 'Multiple Webpages'
             continue
 
-        Results = []
-        for i in range(5):
-            Results.append([results_plan.pop(0).text])
-        sheet[f"D{row}"].value = 'Found'
-        print(Results)
-        for i in results_plan:
-            print(i.text)
+        Results = {'Plans': [], 'Dates': [],
+                   'Company': [], 'EIN': [], 'FA': []}
+        for i in range(search_results):
+            Results['Plans'].append(results_plan[5+i].text)
+            Results['Dates'].append(results_plan[5+i+search_results].text)
+            Results['Company'].append(results_plan[5+i+search_results*2].text)
+            Results['EIN'].append(results_plan[5+i+search_results*3].text)
+            Results['FA'].append(results_plan[5+i+search_results*4].text)
+
+        sheet[f"D{row}"].value = decision(
+            search_results, Results, cleaned_plan)
     driver.quit()
 
     new_excel.save(f"./Automated Results.xlsx")
     new_excel.close()
 
 
+def decision(search_results, Results, cleaned_plan):
+    count = [0, [], []]
+    for i in range(search_results):
+        cleaned_company = check_plan(Results['Company'][i])
+        if cleaned_company == cleaned_plan:
+            count[0] += 1
+            count[1].append(i)
+            count[2].append(Results['EIN'][i])
+
+    ein = list(set(count[2]))
+    if len(ein) == 1:
+        if ein[0] == '':
+            return "Beacon: Found without EIN"
+        else:
+            return ein[0]
+    else:
+        return "Mannual Check is Required"
+
+
 def email_n_password():  # Asking User Email & Password if Unable to Login
     email = input("Enter Login Email    : ")
     password = input("Enter Login Password : ")
-    removals = "inc:inc.:,inc:llc:llc.:,llc:llp:llp.:,llp:co:co.:pa:p.a:pc:p.c:pllc:cpas:plan:and:&:trust:prof:ira:ltd:,ltd:ltd.:the:401:401k:401(k):k:(k):assetmark"
     option = input("\nSAVE Login Credentials in 'login.txt' file (Y) : ")
     if option in ('Y', 'y'):
         with open("login.txt", 'w') as file:
-            file.write(email+'\n'+password+'\n'+removals)
-    return email, password, removals.split(':')
+            file.write(email+'\n'+password+'\n'+default_removals)
+    return email, password
 
 
-def check_plan(plan='', removals=[]):
+def check_plan(plan=''):
     temp = plan.lower().split(' ')
     plan = ''
     for word in temp:
@@ -287,4 +313,4 @@ def excel_file_name_input():
 
 
 main()
-input("Close Program")
+input("Program Finished!!")
