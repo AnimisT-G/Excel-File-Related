@@ -106,7 +106,7 @@ def report():
     print(f"\n\nTotal Unique Records (based on Helper ID): {len(hid)}")
 
     # Checking if Helper ID with different Match type and Source type exist
-    if(len(hid) != len(mt_hid_st)):
+    if (len(hid) != len(mt_hid_st)):
         print(
             f"Total Unique Records (based on Column A,B,C): {len(mt_hid_st)}")
         print("\n**There are records with different 'Match Type' or 'Source Type'.")
