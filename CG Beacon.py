@@ -2,14 +2,15 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, ElementClickInterceptedException, StaleElementReferenceException
-from os import listdir
+from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException, ElementClickInterceptedException
+from os import listdir, system
 from pathlib import Path
 from time import sleep
+from datetime import datetime
 import openpyxl as xl
 
 column_filter_flag = True
-default_removals = "inc:inc.:,inc:llc:llc.:,llc:llp:llp.:,llp:co:co.:pa:p.a:pc:p.c:pllc:cpas:plan:and:&:trust:prof:ira:ltd:,ltd:ltd.:the:401:401k:401(k):k:(k):assetmark"
+default_removals = "inc:inc.:,inc:llc:llc.:,llc:llp:llp.:,llp:co:co.:pa:pa.:p.a:p.a.:pc:pc.:p.c:p.c.:pllc:cpas:plan:and:&:trust:prof:ira:ltd:,ltd:ltd.:the:401:401k:401(k):k:(k):assetmark:db"
 
 
 class BROWSER():
@@ -169,7 +170,7 @@ def main():  # Main Function
     # Email ID and Password for LogIn into Beacon
     global removals
     try:
-        with open("login.txt", 'r') as file:
+        with open(Path("login.txt"), 'r') as file:
             lines = file.readlines()
             email, password, removals = lines[0], lines[1], lines[2].split(':')
     except FileNotFoundError:
@@ -178,7 +179,6 @@ def main():  # Main Function
 
     file_name = excel_file_name_input()
     print(f'File - {file_name}\nOpening File...')
-
     data_excel = xl.load_workbook(Path(file_name))
     data_sheet = data_excel.active
     print("File Opened Successfully!!")
@@ -187,12 +187,14 @@ def main():  # Main Function
     sheet[f"A1"].value = data_sheet[f"B1"].value
     sheet[f"B1"].value = data_sheet[f"Y1"].value
     sheet[f"C1"].value = "Cleaned Org Name"
+    sheet[f"D1"].value = "Comment"
 
     # Creating the Web Automation Object
     driver = BROWSER()
     driver.sign_in(email, password)
     driver.search_filters()
-
+    count = 0
+    start = str(datetime.now())[11:19]
     previous_plan = previous_cleaned_plan = 'a'
 
     for row in range(2, data_sheet.max_row):
@@ -203,7 +205,7 @@ def main():  # Main Function
         sheet[f"A{row}"].value = data_sheet[f"B{row}"].value  # helper_id
         sheet[f"B{row}"].value = data_sheet[f"Y{row}"].value  # parsed_org_name
         plan = str(sheet[f"B{row}"].value)
-        cleaned_plan = check_plan(plan)
+        cleaned_plan = clean_plan(plan)
         if (plan == previous_plan) or (cleaned_plan == previous_cleaned_plan):
             sheet[f"D{row}"].value = sheet[f"D{row - 1}"].value
             continue
@@ -234,32 +236,34 @@ def main():  # Main Function
 
         sheet[f"D{row}"].value = decision(
             search_results, Results, cleaned_plan)
+        count += 1
+        system('cls')
+        print(f"Start Time: {start}\nCount     : {count}")
     driver.quit()
 
     new_excel.save(f"./Automated Results.xlsx")
     new_excel.close()
 
 
-def decision(search_results, Results, cleaned_plan):
+def decision(search_results, Results, cleaned_plan):  # Takes Final Decision
     count = [0, [], []]
     for i in range(search_results):
-        cleaned_company = check_plan(Results['Company'][i])
+        cleaned_company = clean_plan(Results['Company'][i])
         if cleaned_company == cleaned_plan:
             count[0] += 1
             count[1].append(i)
             count[2].append(Results['EIN'][i])
 
-    ein = list(set(count[2]))
+    ein = list(set(count[2]))  # Remove Duplicate EIN's
     if len(ein) == 1:
-        if ein[0] == '':
-            return "Beacon: Found without EIN"
-        else:
-            return ein[0]
-    else:
-        return "Mannual Check is Required"
+        return (ein[0] if (ein[0] != "") else "Beacon: Found without EIN")
+    elif len(ein) == 2:
+        return ((ein[1] if (ein[0] == "") else ein[0]) if "" in ein else "Mannual Check is Required")
+    return "Mannual Check is Required"
 
 
 def email_n_password():  # Asking User Email & Password if Unable to Login
+    system('cls')
     email = input("Enter Login Email    : ")
     password = input("Enter Login Password : ")
     option = input("\nSAVE Login Credentials in 'login.txt' file (Y) : ")
@@ -269,26 +273,24 @@ def email_n_password():  # Asking User Email & Password if Unable to Login
     return email, password
 
 
-def check_plan(plan=''):
+def clean_plan(plan=''):  # Remove the words & special characters to search
     temp = plan.lower().split(' ')
     plan = ''
     for word in temp:
         if (word in removals) or (len(word) < 3):
             continue
         else:
-            c = word.find("'s")
-            if c > 0:
-                word = word[:c]
-            r = [',', '.']
-            word = list(word)
-            for j in r:
-                if j in word:
-                    word.remove(j)
-            plan += ''.join(word) + ' '
+            r = ["'s", ',']
+            for i in r:
+                word = word.replace(i, "")
+            r = ['&', '-', '.']
+            for i in r:
+                word = word.replace(i, " ")
+            plan += word + ' '
     return plan.strip()
 
 
-def excel_file_name_input():
+def excel_file_name_input():  # Select Excel File to be worked upon
     print("Excel files in same directory:")
     files = listdir('.')
     xl_files = []
