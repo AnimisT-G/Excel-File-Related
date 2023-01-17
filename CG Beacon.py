@@ -16,7 +16,8 @@ default_removals = "inc:inc.:,inc:llc:llc.:,llc:llp:llp.:,llp:co:co.:pa:pa.:p.a:
 class BROWSER():
     def __init__(self):  # Opening Automated Webpage in Browser
         self.browser = webdriver.Edge()
-        self.browser.get("https://cap.brightscope.com/search/beacon/#/plan")
+        self.browser.get(
+            "https://cap.brightscope.com/search/beacon/#/plan")
 
     def sign_in(self, email, password):  # Sign In into Beacon
         self.browser.find_element(By.NAME, "email").click()
@@ -49,7 +50,8 @@ class BROWSER():
             flag = self.browser.find_element(
                 By.ID, "filter-nav").is_displayed()
             if flag:
-                self.browser.find_elements(By.TAG_NAME, "v-pane")[1].click()
+                self.browser.find_elements(
+                    By.TAG_NAME, "v-pane")[1].click()
                 flag = False
                 while not flag:
                     flag = plan_name_checkbox.is_displayed()
@@ -57,8 +59,6 @@ class BROWSER():
 
     def column_filters(self):  # Activate EIN & Company Name in Column Filter Navigation
         self.browser.find_element(By.CSS_SELECTOR, "div.col-button").click()
-        column_filter_navigation = self.browser.find_element(
-            By.CSS_SELECTOR, "md-sidenav.md-sidenav-right")
         flag = False
         while not flag:
             flag = self.browser.find_element(
@@ -93,7 +93,8 @@ class BROWSER():
                 By.CSS_SELECTOR, "md-sidenav.md-sidenav-right").is_displayed()
 
     def plan_name_search(self, pname):  # Type Plan Name in Field and Run Search
-        flag = self.browser.find_element(By.ID, "filter-nav").is_displayed()
+        flag = self.browser.find_element(
+            By.ID, "filter-nav").is_displayed()
         if not flag:
             try:
                 self.browser.find_element(
@@ -183,13 +184,13 @@ def main():  # Main Function
     print(f'File - {file_name}\nOpening File...')
     data_excel = xl.load_workbook(Path(file_name))
     data_sheet = data_excel.active
+
     print("File Opened Successfully!!")
 
     hid_range = input(
         "\n*Range of the records to be checked (Example: '100-200')\n or press Enter for whole file:\n")
     if hid_range == "":
-        r1 = 2
-        r2 = data_sheet.max_row
+        r1, r2 = 2, data_sheet.max_row
     else:
         try:
             r1, r2 = [int(i) for i in range.split('-')]
@@ -198,64 +199,71 @@ def main():  # Main Function
             exit()
 
     # Creating the Web Automation Object
-    driver = BROWSER()
-    driver.sign_in(email, password)
-    driver.search_filters()
-    count = 0
-    start = str(datetime.now())[11:19]
-    previous_plan = previous_cleaned_plan = 'a'
+    try:
+        driver = BROWSER()
+        driver.sign_in(email, password)
+        driver.search_filters()
+        count = 0
+        start = str(datetime.now())[11:19]
+        previous_plan = previous_cleaned_plan = 'a'
 
-    system('cls')
-
-    for row in range(r1, r2 + 1):
-        # checking if already checked
-        if (data_sheet[f"{p_c}{row}"].value != None or data_sheet[f"{date_column}{row}"].value != None):
-            continue
-
-        data_sheet[f"{p_c}{row}"].value = "Program Checked"
-        plan = str(data_sheet[f"{parsed_org}{row}"].value)
-        cleaned_plan = clean_plan(plan)
-        if (plan == previous_plan) or (cleaned_plan == previous_cleaned_plan):
-            data_sheet[f"{p_r}{row}"].value = data_sheet[f"{p_r}{row - 1}"].value
-            continue
-        elif len(cleaned_plan) < 5:
-            data_sheet[f"{p_r}{row}"].value = 'Not Searched'
-            continue
-
-        previous_plan = plan
-        data_sheet[f"{p_s}{row}"].value = previous_cleaned_plan = cleaned_plan
-        driver.plan_name_search(cleaned_plan)
-        data_excel.save(f"./{file_name[:-5]} Automated.xlsx")
-        search_results, results_plan = driver.results()
-        if search_results == 0:
-            data_sheet[f"{p_r}{row}"].value = 'Not Found'
-            continue
-        elif search_results > 29:
-            data_sheet[f"{p_r}{row}"].value = 'Multiple Webpages'
-            continue
-
-        Results = {'Plans': [], 'Dates': [],
-                   'Company': [], 'EIN': [], 'FA': []}
-        for i in range(search_results):
-            Results['Plans'].append(results_plan[5+i].text)
-            Results['Dates'].append(results_plan[5+i+search_results].text)
-            Results['Company'].append(results_plan[5+i+search_results*2].text)
-            Results['EIN'].append(results_plan[5+i+search_results*3].text)
-            Results['FA'].append(results_plan[5+i+search_results*4].text)
-
-        data_sheet[f"{p_r}{row}"].value = decision(
-            search_results, Results, cleaned_plan)
-        count += 1
         system('cls')
-        print(
-            f"Start Time : {start}\nCount      : {count}\nCurrent Row: {row}")
-    driver.quit()
-    data_excel.close()
+
+        for row in range(r1, r2 + 1):
+            # checking if already checked
+            if (data_sheet[f"{p_c}{row}"].value != None or data_sheet[f"{date_column}{row}"].value != None):
+                continue
+
+            data_sheet[f"{p_c}{row}"].value = "Program Checked"
+            plan = str(data_sheet[f"{parsed_org}{row}"].value)
+            cleaned_plan = clean_plan(plan)
+            if (plan == previous_plan) or (cleaned_plan == previous_cleaned_plan):
+                data_sheet[f"{p_r}{row}"].value = data_sheet[f"{p_r}{row - 1}"].value
+                continue
+            elif len(cleaned_plan) < 5:
+                data_sheet[f"{p_r}{row}"].value = 'Not Searched'
+                continue
+
+            previous_plan = plan
+            data_sheet[f"{p_s}{row}"].value = previous_cleaned_plan = cleaned_plan
+            driver.plan_name_search(cleaned_plan)
+
+            search_results, results_plan = driver.results()
+            if search_results == 0:
+                data_sheet[f"{p_r}{row}"].value = 'Not Found'
+                continue
+            elif search_results > 29:
+                data_sheet[f"{p_r}{row}"].value = 'Multiple Webpages'
+                continue
+
+            Results = {'Plans': [], 'Dates': [],
+                       'Company': [], 'EIN': [], 'FA': []}
+            for i in range(search_results):
+                Results['Plans'].append(results_plan[5+i].text)
+                Results['Dates'].append(results_plan[5+i+search_results].text)
+                Results['Company'].append(
+                    results_plan[5+i+search_results*2].text)
+                Results['EIN'].append(results_plan[5+i+search_results*3].text)
+                Results['FA'].append(results_plan[5+i+search_results*4].text)
+
+            data_sheet[f"{p_r}{row}"].value = decision(
+                search_results, Results, cleaned_plan)
+            count += 1
+            system('cls')
+            print(
+                f"Start Time : {start}\nCount      : {count}\nCurrent Row: {row}")
+    except:
+        pass
+    finally:
+        print("\n\n*** Saving File...")
+        data_excel.save(f"./{file_name[:-5]} Automated.xlsx")
+        input("\n*** File Saved !!! ***")
+        driver.quit()
 
 
 def decision(search_results, Results, cleaned_plan):  # Takes Final Decision
     if search_results == 1:
-        return Results['EIN'][0]
+        return (Results['EIN'][0] if (Results['EIN'][0] != "") else "Beacon: Found without EIN")
 
     count = [0, [], []]
     for i in range(search_results):
