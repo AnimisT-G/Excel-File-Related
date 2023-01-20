@@ -199,21 +199,22 @@ def main():  # Main Function
             exit()
 
     # Creating the Web Automation Object
+    count = 0
+    save_counter = -0
+    start = str(datetime.now())[11:19]
+    previous_plan = previous_cleaned_plan = 'a'
     try:
         driver = BROWSER()
         driver.sign_in(email, password)
         driver.search_filters()
-        count = 0
-        start = str(datetime.now())[11:19]
-        previous_plan = previous_cleaned_plan = 'a'
-
-        system('cls')
 
         for row in range(r1, r2 + 1):
             # checking if already checked
             if (data_sheet[f"{p_c}{row}"].value != None or data_sheet[f"{date_column}{row}"].value != None):
                 continue
-
+            system('cls')
+            print(
+                f"***Beacon: Automation***\n\nStart Time : {start}\nCount      : {count}\nCurrent Row: {row}\n\nSave Counter: {save_counter}")
             data_sheet[f"{p_c}{row}"].value = "Program Checked"
             plan = str(data_sheet[f"{parsed_org}{row}"].value)
             cleaned_plan = clean_plan(plan)
@@ -223,6 +224,10 @@ def main():  # Main Function
             elif len(cleaned_plan) < 5:
                 data_sheet[f"{p_r}{row}"].value = 'Not Searched'
                 continue
+
+            save_counter += 1
+            if save_counter % 100 == 0:
+                data_excel.save(f"./{file_name[:-5]} Automated.xlsx")
 
             previous_plan = plan
             data_sheet[f"{p_s}{row}"].value = previous_cleaned_plan = cleaned_plan
@@ -249,9 +254,6 @@ def main():  # Main Function
             data_sheet[f"{p_r}{row}"].value = decision(
                 search_results, Results, cleaned_plan)
             count += 1
-            system('cls')
-            print(
-                f"Start Time : {start}\nCount      : {count}\nCurrent Row: {row}")
     except:
         pass
     finally:
@@ -334,4 +336,3 @@ def excel_file_name_input():  # Select Excel File to be worked upon
 
 
 main()
-input("Program Finished!!")
