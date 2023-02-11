@@ -1,9 +1,0 @@
-Email
-Password
-inc:inc.:,inc:llc:llc.:,llc:llp:llp.:,llp:co:co.:pa:pa.:p.a:p.a.:pc:pc.:p.c:p.c.:pllc:cpas:plan:and:&:trust:prof:ira:ltd:,ltd:ltd.:the:401:401k:401(k):k:(k):assetmark:db
-Parsed_Org_Name = Y
-Date Column = AP
-P.Checked = BA
-P.Searchs = BB
-P.Results = BC
-EOF
